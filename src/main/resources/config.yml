@@ -1,0 +1,3 @@
+# TeaNeko Paper 插件配置。
+# 在此添加 Paper 专用配置；旧 Spring Boot 应用配置不会被加载。
+debug: false

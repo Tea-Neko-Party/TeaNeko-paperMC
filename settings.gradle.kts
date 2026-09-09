@@ -1,1 +1,1 @@
-rootProject.name = "TeaNeko-App"
+rootProject.name = "TeaNeko-Paper"

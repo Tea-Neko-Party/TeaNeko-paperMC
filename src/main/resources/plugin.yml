@@ -1,0 +1,15 @@
+name: TeaNekoPaper
+version: ${version}
+main: org.zexnocs.teanekopapermc.TeaNekoPaperPlugin
+description: 面向 Paper 服务端的 TeaNeko core 工具库。
+api-version: '26.2'
+author: zExNocs
+commands:
+  teaneko:
+    description: 显示 TeaNeko Paper 插件状态。
+    usage: /teaneko
+    permission: teaneko.command.status
+permissions:
+  teaneko.command.status:
+    description: 允许使用 /teaneko 指令。
+    default: true

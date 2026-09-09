@@ -46,3 +46,6 @@ gradle.properties
 
 ### temp file ###
 temp/
+
+### agent properties ###
+AGENTS.md
