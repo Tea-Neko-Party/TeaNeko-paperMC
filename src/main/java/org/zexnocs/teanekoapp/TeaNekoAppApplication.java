@@ -1,19 +1,18 @@
 package org.zexnocs.teanekoapp;
 
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * TeaNekoAppApplication 是 TeaNeko 应用程序的入口类。
+ * TeaNeko Spring Boot 应用配置入口，扫描 core 与应用交互层的全部组件。
+ * <p>
+ * Paper 插件通过 {@code TeaNekoPaperPlugin} 创建本应用上下文，不使用独立的 {@code main} 方法，
+ * 以确保生命周期由 Paper 管理。
  *
  * @author zExNocs
- * @date 2026/02/16
+ * @date 2026/09/09
+ * @since paperMC-1.0.0alpha
+ * @see org.zexnocs.teanekopapermc.TeaNekoPaperPlugin
  */
 @SpringBootApplication(scanBasePackages = {"org.zexnocs"})
 public class TeaNekoAppApplication {
-
-	public static void main(String[] args) {
-		var ctx = SpringApplication.run(TeaNekoAppApplication.class, args);
-		Runtime.getRuntime().addShutdownHook(new Thread(ctx::close));
-	}
 }

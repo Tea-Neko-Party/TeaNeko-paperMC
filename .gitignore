@@ -47,5 +47,8 @@ gradle.properties
 ### temp file ###
 temp/
 
+### local Paper development server ###
+/run/
+
 ### agent properties ###
 AGENTS.md
