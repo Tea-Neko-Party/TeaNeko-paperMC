@@ -6,7 +6,7 @@ import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.api.CommandPermission;
 import org.zexnocs.teanekocore.command.api.CommandScope;
 import org.zexnocs.teanekocore.command.api.DefaultCommand;
-import org.zexnocs.teanekopapermc.command.IPaperCommandTabCompleter;
+import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.command.PaperCommandClient;
 import org.zexnocs.teanekopapermc.command.PaperCommandContext;
 import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;

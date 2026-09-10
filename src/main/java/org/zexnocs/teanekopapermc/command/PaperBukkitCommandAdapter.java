@@ -8,6 +8,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandService;
+import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.util.Collections;

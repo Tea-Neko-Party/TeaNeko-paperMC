@@ -8,6 +8,8 @@ import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.interfaces.ICommandDispatcher;
 import org.zexnocs.teanekocore.utils.scanner.inerfaces.IBeanScanner;
 import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandService;
+import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.utils.PaperCommandIntrospectionUtils;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 

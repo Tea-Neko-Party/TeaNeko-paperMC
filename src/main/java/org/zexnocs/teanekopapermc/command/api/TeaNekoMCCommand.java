@@ -1,5 +1,7 @@
 package org.zexnocs.teanekopapermc.command.api;
 
+import lombok.Getter;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -61,25 +63,20 @@ public @interface TeaNekoMCCommand {
      * @date 2026/09/10
      * @since paperMC-1.0.0alpha
      */
+    @Getter
     enum PermissionDefault {
         TRUE("true"),
         FALSE("false"),
         OP("op"),
         NOT_OP("not op");
 
+        /**
+         * 获取 plugin.yml 使用的文本值。
+         */
         private final String yamlValue;
 
         PermissionDefault(String yamlValue) {
             this.yamlValue = yamlValue;
-        }
-
-        /**
-         * 获取 plugin.yml 使用的文本值。
-         *
-         * @return YAML 权限默认值
-         */
-        public String getYamlValue() {
-            return yamlValue;
         }
     }
 }

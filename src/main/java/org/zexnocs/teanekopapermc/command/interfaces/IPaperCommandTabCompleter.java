@@ -1,4 +1,6 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.command.interfaces;
+
+import org.zexnocs.teanekopapermc.command.PaperCommandContext;
 
 import java.util.List;
 

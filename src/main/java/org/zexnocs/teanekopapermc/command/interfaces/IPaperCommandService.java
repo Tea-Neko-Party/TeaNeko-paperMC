@@ -1,6 +1,7 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.command.interfaces;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.zexnocs.teanekopapermc.command.PaperCommandContext;
 
 /**
  * 定义 Spring Core 指令到 Paper 指令系统的注册与分发能力。

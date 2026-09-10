@@ -5,10 +5,7 @@ import org.zexnocs.teanekocore.database.easydata.core.interfaces.IEasyDataDto;
 import org.zexnocs.teanekocore.database.easydata.core.interfaces.IEasyDataDtoTaskConfig;
 import org.zexnocs.teanekocore.database.easydata.general.GeneralEasyData;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -100,7 +97,7 @@ public class HomeService {
                 .filter(key -> key.startsWith(HOME_KEY_PREFIX))
                 .map(key -> playerData.get(key, HomeSnapshot.class))
                 .filter(Objects::nonNull)
-                .sorted((first, second) -> first.homeName().compareTo(second.homeName()))
+                .sorted(Comparator.comparing(HomeSnapshot::homeName))
                 .toList();
     }
 
