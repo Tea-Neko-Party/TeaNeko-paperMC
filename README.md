@@ -22,15 +22,23 @@ TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teanekocore` 与 `org.zexnocs
 
 插件启用时，`TeaNekoPaperPlugin` 会创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时会先关闭该上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
 
-首次启用会将默认 `application.properties` 复制到插件数据目录。默认使用该目录下 `database/teaneko` 的 H2 文件数据库，并在 `6691` 端口提供外部 WebSocket 服务；Paper 游戏服务器继续使用 `25565` 端口。
+首次启用会将默认 `application.properties` 与 `application-prod.properties` 复制到插件数据目录。插件未收到有效的活动 Profile 时默认启用 `prod`；生产服务器请在 `plugins/TeaNekoPaper/application-prod.properties` 填写 MySQL 连接信息，或向 Paper 进程设置 `TEANEKO_DATABASE_URL`、`TEANEKO_DATABASE_USERNAME` 与 `TEANEKO_DATABASE_PASSWORD` 环境变量。外部配置文件会覆盖插件 JAR 内的模板，因此凭据不会被写入构建产物。
 
-如需使用 MySQL，请修改插件数据目录中的 `application.properties`：
+生产配置示例：
 
 ```properties
-spring.datasource.url=jdbc:mysql://127.0.0.1:3306/teaneko?useUnicode=true&characterEncoding=utf8
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/teaneko?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
 spring.datasource.username=你的用户名
 spring.datasource.password=你的密码
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+`dev` 与 `prod` 均可独立指定 `spring.datasource.driver-class-name`。例如，需要在某个 Profile 使用 H2 文件数据库时，在对应的 `application-dev.properties` 或 `application-prod.properties` 中替换数据库配置：
+
+```properties
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.url=jdbc:h2:file:${teaneko.paper.data-directory}/database/teaneko;MODE=MySQL;AUTO_SERVER=TRUE
+spring.datasource.username=sa
+spring.datasource.password=
 ```
 
 ## 本地运行与调试
@@ -48,6 +56,14 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ```powershell
 .\gradlew.bat runServer
 ```
+
+`runServer` 默认以 `prod` Profile 启动，不会读取或复制开发配置。只有手动传入 `-PspringProfile=dev` 时，才会将本机未提交的 `src/main/resources/application-dev.properties` 复制到 `run/plugins/TeaNekoPaper/` 并启用开发数据库；因此该文件中的 MySQL 凭据不会被打入插件 JAR：
+
+```powershell
+.\gradlew.bat runServer -PspringProfile=dev
+```
+
+在 IntelliJ IDEA 中，建议创建或运行 Gradle 的 `runServer` 任务，并在本地开发运行配置的脚本参数中添加 `-PspringProfile=dev`。若通过 IntelliJ 直接启动 Paper 的 Java 进程，请在“运行/调试配置 → VM 选项”添加 `-Dspring.profiles.active=dev`，不要放在程序参数中。
 
 需要断点调试时，使用 `runServer` 内置的 JDWP 配置。服务器会在 `5005` 端口暂停并等待调试器连接：
 

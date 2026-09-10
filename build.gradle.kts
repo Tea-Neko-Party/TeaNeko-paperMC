@@ -44,6 +44,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("tools.jackson.core:jackson-databind")
     implementation("tools.jackson.dataformat:jackson-dataformat-yaml")
+    // 当 dev 或 prod 明确指定 H2 驱动时，提供对应的运行时实现。
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
 
@@ -76,6 +77,8 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.processResources {
     inputs.property("version", project.version)
+    // 本地开发数据库配置可能包含凭据，禁止将其写入可部署的插件包。
+    exclude("application-dev.properties")
     filesMatching("plugin.yml") {
         expand("version" to project.version)
     }
@@ -104,6 +107,14 @@ tasks.assemble {
 }
 
 val debugServerDirectory = layout.projectDirectory.dir("run")
+val debugPluginDataDirectory = debugServerDirectory.dir("plugins/TeaNekoPaper")
+val debugSpringProfileFile = debugPluginDataDirectory.file("spring-profile.properties")
+val localSpringProfile = providers.gradleProperty("springProfile")
+    .orElse("prod")
+    .get()
+check(localSpringProfile in setOf("dev", "prod")) {
+    "springProfile 只能为 dev 或 prod；数据库类型请在对应 Profile 中通过驱动类配置。"
+}
 val acceptMinecraftEula = providers.gradleProperty("acceptMinecraftEula")
     .map(String::toBoolean)
     .orElse(false)
@@ -144,11 +155,41 @@ val prepareDebugServer = tasks.register("prepareDebugServer") {
     }
 }
 
+val prepareLocalSpringConfiguration = tasks.register<Copy>("prepareLocalSpringConfiguration") {
+    group = "Paper 本地服务器"
+    description = "仅在手动启用 dev Profile 时复制未提交的本地数据库配置。"
+
+    val configurationFile = file("src/main/resources/application-dev.properties")
+    from(configurationFile)
+    into(debugPluginDataDirectory)
+
+    onlyIf { localSpringProfile == "dev" }
+
+    doFirst {
+        check(configurationFile.isFile) {
+            "缺少本地 Profile 配置文件：${configurationFile.path}"
+        }
+    }
+}
+
+val prepareLocalSpringProfile = tasks.register("prepareLocalSpringProfile") {
+    group = "Paper 本地服务器"
+    description = "将本次本地启动选择的 Spring Profile 写入插件数据目录。"
+    inputs.property("springProfile", localSpringProfile)
+    outputs.file(debugSpringProfileFile)
+
+    doLast {
+        val profileFile = debugSpringProfileFile.asFile
+        profileFile.parentFile.mkdirs()
+        profileFile.writeText("spring.profiles.active=$localSpringProfile\n")
+    }
+}
+
 tasks {
     runServer {
         minecraftVersion("26.2")
         runDirectory(debugServerDirectory.asFile)
-        dependsOn(prepareDebugServer)
+        dependsOn(prepareDebugServer, prepareLocalSpringConfiguration, prepareLocalSpringProfile)
         jvmArgs("-Xms1G", "-Xmx2G")
     }
 }
