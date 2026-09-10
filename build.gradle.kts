@@ -75,17 +75,42 @@ tasks.withType<JavaCompile>().configureEach {
     options.release.set(25)
 }
 
+val generatedPluginResourcesDirectory = layout.buildDirectory.dir("generated/resources/pluginYml")
+val generatedPluginYmlFile = generatedPluginResourcesDirectory.map { it.file("plugin.yml") }
+val generatePluginYml = tasks.register<JavaExec>("generatePluginYml") {
+    group = "构建"
+    description = "扫描 @TeaNekoMCCommand 并自动生成 Paper plugin.yml。"
+    dependsOn(tasks.compileJava)
+
+    val mainClasses = sourceSets.main.get().output.classesDirs
+    // 扫描类可能引用 Paper 的 compileOnly 类型，生成器必须同时拥有编译与运行时类路径。
+    classpath = files(mainClasses, sourceSets.main.get().compileClasspath, configurations.runtimeClasspath)
+    mainClass.set("org.zexnocs.teanekopapermc.build.TeaNekoPluginDescriptorGenerator")
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
+    inputs.files(mainClasses)
+    inputs.property("version", project.version)
+    outputs.file(generatedPluginYmlFile)
+
+    doFirst {
+        args = listOf(
+            generatedPluginYmlFile.get().asFile.absolutePath,
+            project.version.toString()
+        ) + mainClasses.files.map { it.absolutePath }
+    }
+}
+
 tasks.processResources {
+    dependsOn(generatePluginYml)
     inputs.property("version", project.version)
     // 本地开发数据库配置可能包含凭据，禁止将其写入可部署的插件包。
     exclude("application-dev.properties")
-    filesMatching("plugin.yml") {
-        expand("version" to project.version)
-    }
+    from(generatedPluginResourcesDirectory)
 }
 
 tasks.withType<ShadowJar>().configureEach {
     archiveClassifier.set("")
+    // 构建期描述文件生成器不属于服务器运行时代码。
+    exclude("org/zexnocs/teanekopapermc/build/**")
     // Spring Boot 依赖 META-INF 中的自动配置资源，不能重定位其包名。
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     mergeServiceFiles()
@@ -100,6 +125,7 @@ tasks.withType<ShadowJar>().configureEach {
 
 tasks.jar {
     archiveClassifier.set("dev")
+    exclude("org/zexnocs/teanekopapermc/build/**")
 }
 
 tasks.assemble {

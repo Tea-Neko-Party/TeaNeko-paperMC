@@ -61,6 +61,21 @@ public final class TeaNekoCoreInjection implements AutoCloseable {
     }
 
     /**
+     * 从已经启动的 Spring Boot 应用上下文获取指定类型的 Bean。
+     *
+     * @param beanType Bean 类型
+     * @param <T> Bean 的实际类型
+     * @return Spring 管理的 Bean
+     * @throws IllegalStateException 应用上下文尚未启动时抛出
+     */
+    public <T> T getBean(Class<T> beanType) {
+        if (applicationContext == null) {
+            throw new IllegalStateException("Spring Boot 应用上下文尚未启动。");
+        }
+        return applicationContext.getBean(beanType);
+    }
+
+    /**
      * 使用插件类加载器创建 Spring Boot 应用上下文。
      * <p>
      * Paper 的服务器线程上下文类加载器不会暴露插件 JAR。启动期间必须显式指定插件类加载器，
