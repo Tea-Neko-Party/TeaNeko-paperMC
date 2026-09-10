@@ -20,7 +20,7 @@ TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teanekocore` 与 `org.zexnocs
 
 ## Spring Boot 应用上下文
 
-插件启用时，`TeaNekoPaperPlugin` 会创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时会先关闭该上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
+插件启用时，`TeaNekoPaperPlugin` 会委托 `TeaNekoCoreInjection` 创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时会通过该管理器关闭上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
 
 首次启用会将默认 `application.properties` 与 `application-prod.properties` 复制到插件数据目录。插件未收到有效的活动 Profile 时默认启用 `prod`；生产服务器请在 `plugins/TeaNekoPaper/application-prod.properties` 填写 MySQL 连接信息，或向 Paper 进程设置 `TEANEKO_DATABASE_URL`、`TEANEKO_DATABASE_USERNAME` 与 `TEANEKO_DATABASE_PASSWORD` 环境变量。外部配置文件会覆盖插件 JAR 内的模板，因此凭据不会被写入构建产物。
 
