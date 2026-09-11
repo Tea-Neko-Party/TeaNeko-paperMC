@@ -31,8 +31,23 @@ public final class ExampleCommand {
 
 - `@Command` 继续控制 Core 权限、作用域、客户端、任务命名空间、默认方法和子指令。
 - `@TeaNekoMCCommand` 控制 `plugin.yml` 中的说明、用法、Bukkit 权限及默认授权。
+- `@TeaNekoMCSubCommand` 可以为 Core 子指令覆盖 Bukkit 权限；必须与 `@SubCommand` 同时使用。
 - `@Command.value()` 的第一个名称是主指令，其余名称自动生成 `aliases`。
 - 未标注 `@TeaNekoMCCommand` 的现有 Core 指令不会暴露给 Minecraft。
+
+受限子指令可以同时声明 Core 权限和 Bukkit 权限：
+
+```java
+@SubCommand(value = "set-num", permission = CommandPermission.ADMIN)
+@TeaNekoMCSubCommand(
+        permission = "teaneko.home.admin",
+        permissionDescription = "允许修改玩家家数量上限。",
+        permissionDefault = TeaNekoMCCommand.PermissionDefault.OP
+)
+public void setNumber(CommandData<PaperCommandContext> commandData, String playerId, int number) {
+    // number 会由 Core 参数处理器自动转换；格式错误时进入统一参数错误处理。
+}
+```
 
 ## 自动生成与运行期注册
 

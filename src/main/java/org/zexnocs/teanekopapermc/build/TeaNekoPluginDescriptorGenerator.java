@@ -1,24 +1,22 @@
 package org.zexnocs.teanekopapermc.build;
 
 import org.zexnocs.teanekocore.command.api.Command;
+import org.zexnocs.teanekocore.command.api.SubCommand;
 import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 在构建期扫描已编译的 Minecraft 指令类并生成 Paper plugin.yml。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  * @see TeaNekoMCCommand
  */
@@ -51,7 +49,7 @@ public final class TeaNekoPluginDescriptorGenerator {
 
         List<CommandDefinition> commands = classes.stream()
                 .map(TeaNekoPluginDescriptorGenerator::toCommandDefinition)
-                .filter(definition -> definition != null)
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(CommandDefinition::primaryName))
                 .toList();
         validateUniqueNames(commands);
@@ -133,7 +131,28 @@ public final class TeaNekoPluginDescriptorGenerator {
         for (int index = 1; index < coreMetadata.value().length; index++) {
             aliases.add(normalizeAndValidateName(coreMetadata.value()[index], commandClass));
         }
-        return new CommandDefinition(primaryName, List.copyOf(aliases), minecraftMetadata);
+        validateMinecraftSubCommands(commandClass);
+        return new CommandDefinition(
+                primaryName,
+                List.copyOf(aliases),
+                minecraftMetadata,
+                commandClass
+        );
+    }
+
+    /**
+     * 验证 Minecraft 子指令注解只声明在 Core 子指令方法上。
+     *
+     * @param commandClass 顶级指令类
+     */
+    private static void validateMinecraftSubCommands(Class<?> commandClass) {
+        for (var method : commandClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(TeaNekoMCSubCommand.class)
+                    && !method.isAnnotationPresent(SubCommand.class)) {
+                throw new IllegalStateException("@TeaNekoMCSubCommand 必须与 @SubCommand 同时使用："
+                        + commandClass.getName() + "#" + method.getName());
+            }
+        }
     }
 
     /**
@@ -242,14 +261,26 @@ public final class TeaNekoPluginDescriptorGenerator {
      * @param commands 指令定义
      */
     private static void appendPermissions(StringBuilder yaml, List<CommandDefinition> commands) {
-        Map<String, TeaNekoMCCommand> permissions = new LinkedHashMap<>();
+        Map<String, PermissionDefinition> permissions = new LinkedHashMap<>();
         for (CommandDefinition command : commands) {
             TeaNekoMCCommand metadata = command.metadata();
             if (!metadata.permission().isBlank()) {
-                TeaNekoMCCommand existing = permissions.putIfAbsent(metadata.permission(), metadata);
-                if (existing != null
-                        && existing.permissionDefault() != metadata.permissionDefault()) {
-                    throw new IllegalStateException("权限节点默认策略冲突：" + metadata.permission());
+                collectPermission(
+                        permissions,
+                        metadata.permission(),
+                        metadata.permissionDescription(),
+                        metadata.permissionDefault()
+                );
+            }
+            for (var method : command.commandClass().getDeclaredMethods()) {
+                TeaNekoMCSubCommand subCommand = method.getAnnotation(TeaNekoMCSubCommand.class);
+                if (subCommand != null && !subCommand.permission().isBlank()) {
+                    collectPermission(
+                            permissions,
+                            subCommand.permission(),
+                            subCommand.permissionDescription(),
+                            subCommand.permissionDefault()
+                    );
                 }
             }
         }
@@ -259,16 +290,35 @@ public final class TeaNekoPluginDescriptorGenerator {
 
         yaml.append("permissions:\n");
         for (var entry : permissions.entrySet()) {
-            TeaNekoMCCommand metadata = entry.getValue();
+            PermissionDefinition metadata = entry.getValue();
             yaml.append("  ").append(entry.getKey()).append(":\n");
-            if (!metadata.permissionDescription().isBlank()) {
+            if (!metadata.description().isBlank()) {
                 yaml.append("    description: ")
-                        .append(quote(metadata.permissionDescription()))
+                        .append(quote(metadata.description()))
                         .append('\n');
             }
             yaml.append("    default: ")
                     .append(quote(metadata.permissionDefault().getYamlValue()))
                     .append('\n');
+        }
+    }
+
+    /**
+     * 收集一个 Bukkit 权限节点，并校验重复声明的默认策略一致。
+     *
+     * @param permissions 权限定义映射
+     * @param permission 权限节点
+     * @param description 权限说明
+     * @param permissionDefault 默认授权策略
+     */
+    private static void collectPermission(Map<String, PermissionDefinition> permissions,
+                                          String permission,
+                                          String description,
+                                          TeaNekoMCCommand.PermissionDefault permissionDefault) {
+        PermissionDefinition definition = new PermissionDefinition(description, permissionDefault);
+        PermissionDefinition existing = permissions.putIfAbsent(permission, definition);
+        if (existing != null && existing.permissionDefault() != permissionDefault) {
+            throw new IllegalStateException("权限节点默认策略冲突：" + permission);
         }
     }
 
@@ -288,12 +338,28 @@ public final class TeaNekoPluginDescriptorGenerator {
      * @param primaryName Bukkit 主指令名称
      * @param aliases Bukkit 指令别名
      * @param metadata Minecraft 指令元数据
+     * @param commandClass 顶级指令类
      * @author zExNocs
-     * @date 2026/09/10
+     * @date 2026/09/11
      * @since paperMC-1.0.0alpha
      */
     private record CommandDefinition(String primaryName,
                                      List<String> aliases,
-                                     TeaNekoMCCommand metadata) {
+                                     TeaNekoMCCommand metadata,
+                                     Class<?> commandClass) {
+    }
+
+    /**
+     * 保存一个待写入 plugin.yml 的 Bukkit 权限定义。
+     *
+     * @param description 权限说明
+     * @param permissionDefault 默认授权策略
+     * @author zExNocs
+     * @date 2026/09/11
+     * @since paperMC-1.0.0alpha
+     */
+    private record PermissionDefinition(
+            String description,
+            TeaNekoMCCommand.PermissionDefault permissionDefault) {
     }
 }

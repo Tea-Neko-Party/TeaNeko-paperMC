@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentMap;
  * 数量上限使用独立键保存。首次读取可能访问数据库，因此调用方不得在 Paper 主线程执行。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  * @see GeneralEasyData
  */
@@ -33,6 +33,8 @@ public class HomeService {
      * 同一玩家的“检查数量并写入”必须串行，避免快速重复指令突破数量上限。
      */
     private final ConcurrentMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
+    /** 已完成数据库加载的玩家家名称快照，供主线程参数补全安全读取。 */
+    private final ConcurrentMap<UUID, List<String>> cachedHomeNames = new ConcurrentHashMap<>();
 
     /**
      * 创建或更新一个家。更新已有家不受数量上限影响。
@@ -68,6 +70,7 @@ public class HomeService {
                     homeName, worldName, x, y, z, yaw, pitch
             );
             pushAndWait(playerData.getTaskConfig("保存玩家家位置").set(homeKey, snapshot));
+            cacheHomeNames(playerUuid, playerData);
             return new SaveResult(updating ? SaveStatus.UPDATED : SaveStatus.CREATED, homeLimit);
         }
     }
@@ -80,8 +83,9 @@ public class HomeService {
      * @return 家位置快照
      */
     public Optional<HomeSnapshot> findHome(UUID playerUuid, String homeName) {
-        HomeSnapshot snapshot = getPlayerData(playerUuid)
-                .get(getHomeKey(homeName), HomeSnapshot.class);
+        IEasyDataDto playerData = getPlayerData(playerUuid);
+        HomeSnapshot snapshot = playerData.get(getHomeKey(homeName), HomeSnapshot.class);
+        cacheHomeNames(playerUuid, playerData);
         return Optional.ofNullable(snapshot);
     }
 
@@ -93,12 +97,52 @@ public class HomeService {
      */
     public List<HomeSnapshot> findAllHomes(UUID playerUuid) {
         IEasyDataDto playerData = getPlayerData(playerUuid);
-        return playerData.keySet().stream()
+        List<HomeSnapshot> homes = playerData.keySet().stream()
                 .filter(key -> key.startsWith(HOME_KEY_PREFIX))
                 .map(key -> playerData.get(key, HomeSnapshot.class))
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(HomeSnapshot::homeName))
                 .toList();
+        cacheHomeNames(playerUuid, playerData);
+        return homes;
+    }
+
+    /**
+     * 删除玩家指定名称的家。
+     * <p>
+     * 检查与删除在玩家级锁内完成，避免并发指令得到错误的删除结果。
+     * 该方法会等待 EasyData 写入完成，应从异步线程调用。
+     *
+     * @param playerUuid 玩家 UUID
+     * @param homeName 经过规范化的家名称
+     * @return 找到并删除时返回 {@code true}，家不存在时返回 {@code false}
+     */
+    public boolean deleteHome(UUID playerUuid, String homeName) {
+        Objects.requireNonNull(playerUuid, "玩家 UUID 不能为空。");
+        Objects.requireNonNull(homeName, "家名称不能为空。");
+
+        synchronized (getPlayerLock(playerUuid)) {
+            IEasyDataDto playerData = getPlayerData(playerUuid);
+            String homeKey = getHomeKey(homeName);
+            if (!playerData.has(homeKey)) {
+                return false;
+            }
+            pushAndWait(playerData.getTaskConfig("删除玩家家位置").remove(homeKey));
+            cacheHomeNames(playerUuid, playerData);
+            return true;
+        }
+    }
+
+    /**
+     * 获取最近一次 Home 数据访问后缓存的家名称。
+     * <p>
+     * 本方法不会访问数据库，可安全用于 Paper 主线程参数补全。
+     *
+     * @param playerUuid 玩家 UUID
+     * @return 按名称排序的只读快照；尚未加载时返回空列表
+     */
+    public List<String> findCachedHomeNames(UUID playerUuid) {
+        return cachedHomeNames.getOrDefault(playerUuid, List.of());
     }
 
     /**
@@ -173,6 +217,21 @@ public class HomeService {
      */
     private String getHomeKey(String homeName) {
         return HOME_KEY_PREFIX + homeName;
+    }
+
+    /**
+     * 从已经加载的 EasyData 缓存更新玩家家名称快照。
+     *
+     * @param playerUuid 玩家 UUID
+     * @param playerData 已加载的玩家数据目标
+     */
+    private void cacheHomeNames(UUID playerUuid, IEasyDataDto playerData) {
+        List<String> homeNames = playerData.keySet().stream()
+                .filter(key -> key.startsWith(HOME_KEY_PREFIX))
+                .map(key -> key.substring(HOME_KEY_PREFIX.length()))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+        cachedHomeNames.put(playerUuid, homeNames);
     }
 
     /**

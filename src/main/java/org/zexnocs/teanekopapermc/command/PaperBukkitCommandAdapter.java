@@ -8,6 +8,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
 import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandService;
 import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
@@ -23,7 +24,7 @@ import java.util.Set;
  * 将 Bukkit 的指令执行与补全回调适配到通用 Paper 指令服务。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  */
 public final class PaperBukkitCommandAdapter implements CommandExecutor, TabCompleter {
@@ -33,6 +34,7 @@ public final class PaperBukkitCommandAdapter implements CommandExecutor, TabComp
     private final TeaNekoMCCommand minecraftMetadata;
     private final Map<String, String> coreNamesByBukkitName;
     private final Set<String> subCommandNames;
+    private final Map<String, TeaNekoMCSubCommand> minecraftSubCommands;
     private final @Nullable IPaperCommandTabCompleter customTabCompleter;
 
     /**
@@ -43,6 +45,7 @@ public final class PaperBukkitCommandAdapter implements CommandExecutor, TabComp
      * @param coreMetadata Core 指令元数据
      * @param minecraftMetadata Minecraft 指令元数据
      * @param subCommandNames 子指令名称
+     * @param minecraftSubCommands Minecraft 子指令元数据
      * @param customTabCompleter 可选的自定义补全器
      */
     public PaperBukkitCommandAdapter(JavaPlugin plugin,
@@ -50,12 +53,14 @@ public final class PaperBukkitCommandAdapter implements CommandExecutor, TabComp
                                      org.zexnocs.teanekocore.command.api.Command coreMetadata,
                                      TeaNekoMCCommand minecraftMetadata,
                                      Set<String> subCommandNames,
+                                     Map<String, TeaNekoMCSubCommand> minecraftSubCommands,
                                      @Nullable IPaperCommandTabCompleter customTabCompleter) {
         this.plugin = plugin;
         this.commandService = commandService;
         this.coreMetadata = coreMetadata;
         this.minecraftMetadata = minecraftMetadata;
         this.subCommandNames = subCommandNames;
+        this.minecraftSubCommands = minecraftSubCommands;
         this.customTabCompleter = customTabCompleter;
         this.coreNamesByBukkitName = buildCommandNameMap(coreMetadata.value());
     }
@@ -72,7 +77,12 @@ public final class PaperBukkitCommandAdapter implements CommandExecutor, TabComp
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String @NotNull [] args) {
-        commandService.dispatch(createContext(sender, label, args));
+        PaperCommandContext context = createContext(sender, label, args);
+        if (!hasSubCommandPermission(sender, args)) {
+            PaperCommandUtils.sendOnMainThread(context, "你没有执行该子指令的权限。");
+            return true;
+        }
+        commandService.dispatch(context);
         return true;
     }
 
@@ -93,15 +103,56 @@ public final class PaperBukkitCommandAdapter implements CommandExecutor, TabComp
         PaperCommandContext context = createContext(sender, alias, args);
         if (customTabCompleter != null) {
             List<String> completions = customTabCompleter.complete(context);
-            return completions == null ? Collections.emptyList() : completions;
+            return completions == null
+                    ? Collections.emptyList()
+                    : filterUnauthorizedSubCommands(sender, args, completions);
         }
         if (args.length != 1) {
             return Collections.emptyList();
         }
         String prefix = args[0].toLowerCase(Locale.ROOT);
         return subCommandNames.stream()
+                .filter(name -> hasSubCommandPermission(sender, new String[]{name}))
                 .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
                 .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    /**
+     * 判断当前发送者是否拥有目标子指令覆盖声明的 Bukkit 权限。
+     *
+     * @param sender 指令发送者
+     * @param args 指令参数
+     * @return 未覆盖权限或已经获得权限时返回 {@code true}
+     */
+    private boolean hasSubCommandPermission(CommandSender sender, String[] args) {
+        if (args.length == 0) {
+            return true;
+        }
+        TeaNekoMCSubCommand metadata = minecraftSubCommands.get(
+                args[0].toLowerCase(Locale.ROOT)
+        );
+        return metadata == null
+                || metadata.permission().isBlank()
+                || sender.hasPermission(metadata.permission());
+    }
+
+    /**
+     * 在补全第一个参数时隐藏发送者无权使用的子指令。
+     *
+     * @param sender 指令发送者
+     * @param args 已输入参数
+     * @param completions 原始补全项
+     * @return 权限过滤后的补全项
+     */
+    private List<String> filterUnauthorizedSubCommands(CommandSender sender,
+                                                        String[] args,
+                                                        List<String> completions) {
+        if (args.length != 1) {
+            return completions;
+        }
+        return completions.stream()
+                .filter(completion -> hasSubCommandPermission(sender, new String[]{completion}))
                 .toList();
     }
 

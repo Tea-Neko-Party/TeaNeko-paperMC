@@ -14,7 +14,7 @@ import java.util.logging.Level;
  * 提供玩家家指令共享的名称校验和跨世界传送方法。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  */
 public final class HomeCommandUtils {

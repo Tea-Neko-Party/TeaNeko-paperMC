@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 本服务只负责 Paper 生命周期接入与 Bukkit 回调适配。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  * @see CommandScanner
  * @see TeaNekoMCCommand
@@ -95,6 +95,7 @@ public final class PaperCommandService implements IPaperCommandService {
                         coreMetadata,
                         minecraftMetadata,
                         PaperCommandIntrospectionUtils.getSubCommandNames(commandClass),
+                        PaperCommandIntrospectionUtils.getMinecraftSubCommandMetadata(commandClass),
                         tabCompleter
                 );
                 pluginCommand.setExecutor(adapter);

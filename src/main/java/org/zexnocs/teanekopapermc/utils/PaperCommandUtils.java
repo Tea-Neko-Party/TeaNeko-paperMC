@@ -9,6 +9,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 import org.zexnocs.teanekopapermc.command.PaperCommandContext;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +21,7 @@ import java.util.logging.Level;
  * 提供 Paper 指令常用的名称处理、线程切换、发送者解析与异常反馈方法。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  */
 public final class PaperCommandUtils {
@@ -142,9 +144,8 @@ public final class PaperCommandUtils {
                                                           String identifier) {
         UUID uuid = parseUuid(identifier);
         if (uuid != null) {
-            UUID finalUuid = uuid;
             String displayName = callOnMainThread(context.plugin(), () -> {
-                OfflinePlayer offlinePlayer = context.plugin().getServer().getOfflinePlayer(finalUuid);
+                OfflinePlayer offlinePlayer = context.plugin().getServer().getOfflinePlayer(uuid);
                 return offlinePlayer.getName();
             });
             return new ResolvedPlayer(uuid, displayName == null ? uuid.toString() : displayName);
@@ -174,6 +175,41 @@ public final class PaperCommandUtils {
      */
     public static boolean isConsole(CommandSender sender) {
         return sender instanceof ConsoleCommandSender;
+    }
+
+    /**
+     * 根据当前输入前缀过滤、去重并排序补全候选项。
+     *
+     * @param candidates 候选项
+     * @param input 当前输入
+     * @return 可直接交给 Paper 的补全结果
+     */
+    public static List<String> completeByPrefix(Collection<String> candidates, String input) {
+        String prefix = input.toLowerCase(Locale.ROOT);
+        return candidates.stream()
+                .distinct()
+                .filter(candidate -> candidate.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    /**
+     * 补全当前发送者可见的在线玩家名称。
+     * <p>
+     * 该方法读取 Bukkit 在线玩家集合，只能从服务器主线程调用。
+     *
+     * @param context 指令上下文
+     * @param input 当前玩家名称前缀
+     * @return 在线玩家名称补全
+     */
+    public static List<String> completeVisiblePlayerNames(PaperCommandContext context,
+                                                           String input) {
+        Player sender = context.sender() instanceof Player player ? player : null;
+        List<String> candidates = context.plugin().getServer().getOnlinePlayers().stream()
+                .filter(player -> sender == null || sender.canSee(player))
+                .map(Player::getName)
+                .toList();
+        return completeByPrefix(candidates, input);
     }
 
     /**

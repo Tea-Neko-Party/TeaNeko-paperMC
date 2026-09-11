@@ -6,6 +6,7 @@ import org.zexnocs.teanekocore.command.api.SubCommand;
 import org.zexnocs.teanekocore.command.interfaces.ICommandClient;
 import org.zexnocs.teanekopapermc.command.PaperCommandClient;
 import org.zexnocs.teanekopapermc.command.PaperCommandContext;
+import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -13,14 +14,17 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * 提供 Paper 指令扫描阶段使用的反射检查与子指令提取方法。
  *
  * @author zExNocs
- * @date 2026/09/10
+ * @date 2026/09/11
  * @since paperMC-1.0.0alpha
  */
 public final class PaperCommandIntrospectionUtils {
@@ -67,6 +71,41 @@ public final class PaperCommandIntrospectionUtils {
             }
         }
         return Set.copyOf(names);
+    }
+
+    /**
+     * 提取子指令名称对应的 Minecraft 权限声明。
+     *
+     * @param commandClass 指令 Bean 的实际类型
+     * @return 小写子指令名称到权限注解的只读映射
+     * @throws IllegalStateException 注解未与 Core 子指令注解同时使用，或别名权限冲突时抛出
+     */
+    public static Map<String, TeaNekoMCSubCommand> getMinecraftSubCommandMetadata(
+            Class<?> commandClass) {
+        Map<String, TeaNekoMCSubCommand> metadataByName = new LinkedHashMap<>();
+        for (Method method : commandClass.getDeclaredMethods()) {
+            TeaNekoMCSubCommand minecraftMetadata = method.getAnnotation(TeaNekoMCSubCommand.class);
+            if (minecraftMetadata == null) {
+                continue;
+            }
+            SubCommand coreMetadata = method.getAnnotation(SubCommand.class);
+            if (coreMetadata == null) {
+                throw new IllegalStateException("@TeaNekoMCSubCommand 必须与 @SubCommand 同时使用："
+                        + commandClass.getName() + "#" + method.getName());
+            }
+            for (String name : coreMetadata.value()) {
+                String normalizedName = name.toLowerCase(Locale.ROOT);
+                TeaNekoMCSubCommand existing = metadataByName.putIfAbsent(
+                        normalizedName,
+                        minecraftMetadata
+                );
+                if (existing != null && !existing.equals(minecraftMetadata)) {
+                    throw new IllegalStateException("Minecraft 子指令权限声明冲突："
+                            + commandClass.getName() + "#" + name);
+                }
+            }
+        }
+        return Map.copyOf(metadataByName);
     }
 
     /**
