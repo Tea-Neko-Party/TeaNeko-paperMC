@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.home;
+package org.zexnocs.teanekopapermc.feature.command.home;
 
 import org.springframework.stereotype.Service;
 import org.zexnocs.teanekocore.database.easydata.core.interfaces.IEasyDataDto;

@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.core.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -7,10 +7,10 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
-import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandService;
-import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCSubCommand;
+import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandService;
+import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.util.Collections;

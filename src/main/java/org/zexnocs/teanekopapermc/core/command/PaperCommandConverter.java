@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.core.command;
 
 import org.bukkit.entity.Player;
 import org.springframework.stereotype.Component;

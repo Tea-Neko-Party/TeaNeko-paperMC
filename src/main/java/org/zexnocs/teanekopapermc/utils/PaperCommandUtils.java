@@ -7,7 +7,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
-import org.zexnocs.teanekopapermc.command.PaperCommandContext;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandContext;
 
 import java.util.Collection;
 import java.util.List;

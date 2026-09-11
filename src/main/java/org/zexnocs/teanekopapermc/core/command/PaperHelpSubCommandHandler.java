@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.core.command;
 
 import org.zexnocs.teanekocore.command.CommandData;
 import org.zexnocs.teanekocore.command.CommandMapData;

@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.command.api;
+package org.zexnocs.teanekopapermc.core.command.api;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

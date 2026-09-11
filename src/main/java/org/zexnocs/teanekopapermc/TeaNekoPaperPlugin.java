@@ -1,7 +1,7 @@
 package org.zexnocs.teanekopapermc;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandService;
+import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandService;
 import org.zexnocs.teanekopapermc.core.TeaNekoCoreInjection;
 
 /**

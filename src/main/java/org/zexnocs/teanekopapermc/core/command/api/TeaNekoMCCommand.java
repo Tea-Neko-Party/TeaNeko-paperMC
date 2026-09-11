@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.command.api;
+package org.zexnocs.teanekopapermc.core.command.api;
 
 import lombok.Getter;
 

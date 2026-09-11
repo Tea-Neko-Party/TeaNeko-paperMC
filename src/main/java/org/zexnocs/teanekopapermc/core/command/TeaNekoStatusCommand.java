@@ -1,11 +1,11 @@
-package org.zexnocs.teanekopapermc.command;
+package org.zexnocs.teanekopapermc.core.command;
 
 import org.zexnocs.teanekocore.command.CommandData;
 import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.api.CommandPermission;
 import org.zexnocs.teanekocore.command.api.CommandScope;
 import org.zexnocs.teanekocore.command.api.DefaultCommand;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.util.List;

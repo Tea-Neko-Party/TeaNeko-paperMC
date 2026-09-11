@@ -4,9 +4,9 @@ import org.zexnocs.teanekocore.command.CommandData;
 import org.zexnocs.teanekocore.command.api.DefaultCommand;
 import org.zexnocs.teanekocore.command.api.SubCommand;
 import org.zexnocs.teanekocore.command.interfaces.ICommandClient;
-import org.zexnocs.teanekopapermc.command.PaperCommandClient;
-import org.zexnocs.teanekopapermc.command.PaperCommandContext;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandClient;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandContext;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCSubCommand;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;

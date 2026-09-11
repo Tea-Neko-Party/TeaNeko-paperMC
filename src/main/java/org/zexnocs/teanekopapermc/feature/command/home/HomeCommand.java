@@ -1,4 +1,4 @@
-package org.zexnocs.teanekopapermc.home.command;
+package org.zexnocs.teanekopapermc.feature.command.home;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -10,13 +10,11 @@ import org.zexnocs.teanekocore.command.api.CommandScope;
 import org.zexnocs.teanekocore.command.api.DefaultCommand;
 import org.zexnocs.teanekocore.command.api.DefaultValue;
 import org.zexnocs.teanekocore.command.api.SubCommand;
-import org.zexnocs.teanekopapermc.command.PaperCommandClient;
-import org.zexnocs.teanekopapermc.command.PaperCommandContext;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
-import org.zexnocs.teanekopapermc.command.interfaces.IPaperCommandTabCompleter;
-import org.zexnocs.teanekopapermc.home.HomeService;
-import org.zexnocs.teanekopapermc.home.utils.HomeCommandUtils;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandClient;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandContext;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCSubCommand;
+import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandTabCompleter;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.util.ArrayList;

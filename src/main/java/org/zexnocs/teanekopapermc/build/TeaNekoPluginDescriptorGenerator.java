@@ -2,8 +2,8 @@ package org.zexnocs.teanekopapermc.build;
 
 import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.api.SubCommand;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCCommand;
-import org.zexnocs.teanekopapermc.command.api.TeaNekoMCSubCommand;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
+import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCSubCommand;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.io.IOException;

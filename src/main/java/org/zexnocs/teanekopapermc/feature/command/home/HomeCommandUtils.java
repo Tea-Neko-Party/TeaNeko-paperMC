@@ -1,10 +1,9 @@
-package org.zexnocs.teanekopapermc.home.utils;
+package org.zexnocs.teanekopapermc.feature.command.home;
 
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.zexnocs.teanekopapermc.command.PaperCommandContext;
-import org.zexnocs.teanekopapermc.home.HomeService;
+import org.zexnocs.teanekopapermc.core.command.PaperCommandContext;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
 import java.util.Locale;
