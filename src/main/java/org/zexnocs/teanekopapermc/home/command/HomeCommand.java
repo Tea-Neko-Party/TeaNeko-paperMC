@@ -40,11 +40,13 @@ import java.util.Locale;
 )
 @TeaNekoMCCommand(
         description = "管理并传送到玩家的家。",
-        usage = "/home <tp|set|remove|list|set-num> [参数]",
+        usage = "/home；/home <tp|set|remove|list> [参数]",
         permission = "teaneko.home.use",
         permissionDescription = "允许使用玩家家相关指令。"
 )
 public final class HomeCommand implements IPaperCommandTabCompleter {
+    private static final String PLAYER_USAGE =
+            "/home；/home tp [名称]；/home set [名称]；/home remove [名称]；/home list";
     private static final List<String> SUB_COMMANDS = List.of(
             "tp", "set", "remove", "list", "set-num"
     );
@@ -64,18 +66,30 @@ public final class HomeCommand implements IPaperCommandTabCompleter {
     }
 
     /**
-     * 未指定子指令或输入未知子指令时显示可用用法。
+     * 未指定子指令时传送到默认家；输入未知子指令时仅显示玩家用法。
+     * <p>
+     * 默认入口固定查询名为 {@code home} 的家，不把额外参数解释为家名称。
      *
      * @param commandData Core 指令数据
-     * @param ignoredArgs 未匹配的参数
+     * @param unmatchedArgs 未匹配的参数
      */
     @DefaultCommand
-    public void showUsage(CommandData<PaperCommandContext> commandData,
-                          List<String> ignoredArgs) {
-        PaperCommandUtils.sendOnMainThread(
-                commandData.getRawData(),
-                "用法：/home <tp|set|remove|list> [名称]；管理员：/home set-num <玩家名或 UUID> <数量>"
-        );
+    public void teleportDefaultHome(CommandData<PaperCommandContext> commandData,
+                                    List<String> unmatchedArgs) {
+        PaperCommandContext context = commandData.getRawData();
+        if (!unmatchedArgs.isEmpty()) {
+            PaperCommandUtils.sendOnMainThread(
+                    context,
+                    "其他名称的家必须使用 /home tp <名称> 传送。用法：" + PLAYER_USAGE
+            );
+            return;
+        }
+
+        Player player = PaperCommandUtils.requirePlayer(context);
+        if (player == null) {
+            return;
+        }
+        teleportExistingHome(context, player, HomeCommandUtils.DEFAULT_HOME_NAME, true);
     }
 
     /**
@@ -99,17 +113,7 @@ public final class HomeCommand implements IPaperCommandTabCompleter {
         if (homeName == null) {
             return;
         }
-        try {
-            homeService.findHome(player.getUniqueId(), homeName).ifPresentOrElse(
-                    home -> HomeCommandUtils.teleport(context, player, home),
-                    () -> PaperCommandUtils.sendOnMainThread(
-                            context,
-                            "不存在名为 \"" + homeName + "\" 的家。"
-                    )
-            );
-        } catch (RuntimeException exception) {
-            PaperCommandUtils.reportFailure(context, "查询玩家家位置失败", exception);
-        }
+        teleportExistingHome(context, player, homeName, false);
     }
 
     /**
@@ -364,6 +368,33 @@ public final class HomeCommand implements IPaperCommandTabCompleter {
     private String normalizeAndValidateHomeName(PaperCommandContext context, String rawHomeName) {
         String homeName = HomeCommandUtils.normalizeHomeName(rawHomeName);
         return HomeCommandUtils.validateHomeName(context, homeName) ? homeName : null;
+    }
+
+    /**
+     * 查询并传送到已有的家，在默认入口找不到家时补充普通玩家用法。
+     *
+     * @param context 指令上下文
+     * @param player 玩家
+     * @param homeName 经过规范化的家名称
+     * @param explainDefaultHomeMissing 是否说明默认家不存在后的普通玩家操作方式
+     */
+    private void teleportExistingHome(PaperCommandContext context,
+                                      Player player,
+                                      String homeName,
+                                      boolean explainDefaultHomeMissing) {
+        try {
+            homeService.findHome(player.getUniqueId(), homeName).ifPresentOrElse(
+                    home -> HomeCommandUtils.teleport(context, player, home),
+                    () -> PaperCommandUtils.sendOnMainThread(
+                            context,
+                            explainDefaultHomeMissing
+                                    ? "不存在默认家 \"home\"。用法：" + PLAYER_USAGE
+                                    : "不存在名为 \"" + homeName + "\" 的家。"
+                    )
+            );
+        } catch (RuntimeException exception) {
+            PaperCommandUtils.reportFailure(context, "查询玩家家位置失败", exception);
+        }
     }
 
     /**
