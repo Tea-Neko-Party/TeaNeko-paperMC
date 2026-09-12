@@ -1,8 +1,8 @@
 package org.zexnocs.teanekopapermc;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandService;
-import org.zexnocs.teanekopapermc.core.TeaNekoCoreInjection;
+import org.zexnocs.teanekopapermc.core.handler.TeaNekoCoreHandler;
+import org.zexnocs.teanekopapermc.core.handler.interfaces.ITeaNekoCoreHandler;
 
 /**
  * TeaNeko Paper 插件入口，负责衔接 Paper 生命周期与 TeaNeko Core。
@@ -10,22 +10,26 @@ import org.zexnocs.teanekopapermc.core.TeaNekoCoreInjection;
  * @author zExNocs
  * @date 2026/09/10
  * @since paperMC-1.0.0alpha
- * @see TeaNekoCoreInjection
  */
 public final class TeaNekoPaperPlugin extends JavaPlugin {
-    private TeaNekoCoreInjection coreInjection;
+
+    private ITeaNekoCoreHandler teaNekoCoreHandler = null;
+
 
     /**
      * 初始化 Bukkit 默认配置，并启动 TeaNeko Core 的 Spring Boot 应用上下文。
      */
     @Override
     public void onEnable() {
+        // 保存初始 config
         saveDefaultConfig();
-        coreInjection = new TeaNekoCoreInjection(this);
 
+        // 尝试启动 spring boot 上下文
         try {
-            coreInjection.start();
-            coreInjection.getBean(IPaperCommandService.class).registerAll(this);
+            getLogger().info("正在启动 TeaNeko Core 的 Spring Boot 应用上下文...");
+            this.teaNekoCoreHandler = new TeaNekoCoreHandler(this);
+            // 启动 Spring Boot 应用上下文，并注册所有 Core 指令到 Paper 指令系统。
+            this.teaNekoCoreHandler.start();
             getLogger().info("TeaNeko Paper 插件与 Spring Boot 应用上下文已启用。");
         } catch (RuntimeException exception) {
             closeCoreInjection();
@@ -47,10 +51,9 @@ public final class TeaNekoPaperPlugin extends JavaPlugin {
      * 安全关闭并释放 TeaNeko Core 上下文管理器。
      */
     private void closeCoreInjection() {
-        if (coreInjection != null) {
-            coreInjection.close();
-            coreInjection = null;
+        if (teaNekoCoreHandler != null) {
+            teaNekoCoreHandler.close();
+            teaNekoCoreHandler = null;
         }
     }
-
 }

@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @author zExNocs
  * @date 2026/02/26
- * @since 4.0.9
+ *
  */
 public abstract class AbstractScanner implements IScanner {
 

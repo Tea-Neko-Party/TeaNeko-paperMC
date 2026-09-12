@@ -218,7 +218,12 @@ tasks {
         dependsOn(prepareDebugServer, prepareLocalSpringConfiguration, prepareLocalSpringProfile)
         // 将本次构建复制到 run/plugins 后再加载，避免服务器运行期间重新构建胖包破坏延迟类加载。
         legacyPluginLoading()
-        jvmArgs("-Xms1G", "-Xmx2G")
+        jvmArgs(
+            "-Xms4G",
+            "-Xmx8G",
+            "-Dfile.encoding=UTF-8",
+            "-Dsun.stdout.encoding=UTF-8",
+            "-Dsun.stderr.encoding=UTF-8")
     }
 }
 

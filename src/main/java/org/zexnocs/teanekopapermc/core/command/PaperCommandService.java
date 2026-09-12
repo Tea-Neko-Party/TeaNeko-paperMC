@@ -6,10 +6,14 @@ import org.springframework.stereotype.Service;
 import org.zexnocs.teanekocore.command.CommandScanner;
 import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.interfaces.ICommandDispatcher;
+import org.zexnocs.teanekocore.logger.ILogger;
 import org.zexnocs.teanekocore.utils.scanner.inerfaces.IBeanScanner;
 import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
 import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandService;
 import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandTabCompleter;
+import org.zexnocs.teanekopapermc.core.handler.TeaNekoCoreHandler;
+import org.zexnocs.teanekopapermc.core.initializer.api.ITeaNekoInitializer;
+import org.zexnocs.teanekopapermc.core.initializer.api.TeaNekoInitializer;
 import org.zexnocs.teanekopapermc.utils.PaperCommandIntrospectionUtils;
 import org.zexnocs.teanekopapermc.utils.PaperCommandUtils;
 
@@ -27,13 +31,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @see CommandScanner
  * @see TeaNekoMCCommand
  */
-@Service
-public final class PaperCommandService implements IPaperCommandService {
+@TeaNekoInitializer
+public final class PaperCommandService implements IPaperCommandService, ITeaNekoInitializer {
     private final IBeanScanner beanScanner;
     private final CommandScanner commandScanner;
     private final ICommandDispatcher commandDispatcher;
     private final PaperCommandConverter commandConverter;
     private final AtomicBoolean registered = new AtomicBoolean(false);
+    private final ILogger iLogger;
 
     /**
      * 创建通用 Paper 指令服务。
@@ -46,11 +51,12 @@ public final class PaperCommandService implements IPaperCommandService {
     public PaperCommandService(IBeanScanner beanScanner,
                                CommandScanner commandScanner,
                                ICommandDispatcher commandDispatcher,
-                               PaperCommandConverter commandConverter) {
+                               PaperCommandConverter commandConverter, ILogger iLogger) {
         this.beanScanner = beanScanner;
         this.commandScanner = commandScanner;
         this.commandDispatcher = commandDispatcher;
         this.commandConverter = commandConverter;
+        this.iLogger = iLogger;
     }
 
     /**
@@ -106,8 +112,8 @@ public final class PaperCommandService implements IPaperCommandService {
             registered.set(false);
             throw exception;
         }
-
-        plugin.getLogger().info("已从 Spring Boot 自动注册 " + commandCount + " 个 Minecraft 指令。");
+        iLogger.info(this.getClass().getName(),
+                "已从 Spring Boot 自动注册 " + commandCount + " 个 Minecraft 指令。");
     }
 
     /**
@@ -153,5 +159,17 @@ public final class PaperCommandService implements IPaperCommandService {
                 throw new IllegalStateException("Core 指令扫描器中缺少指令：" + coreName);
             }
         }
+    }
+
+    /**
+     * 初始化方法，用于在插件启动时进行必要的初始化操作。
+     *
+     * @param plugin 当前的 JavaPlugin 实例
+     */
+    @Override
+    public void initialize(JavaPlugin plugin) {
+        iLogger.info(this.getClass().getName(), "正在初始化 Paper 指令服务...");
+        registerAll(plugin);
+        iLogger.info(this.getClass().getName(), "已完成 Paper 指令服务的初始化。");
     }
 }

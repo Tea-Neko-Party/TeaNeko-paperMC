@@ -1,5 +1,6 @@
-package org.zexnocs.teanekopapermc.core;
+package org.zexnocs.teanekopapermc.core.handler;
 
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -29,10 +30,17 @@ import java.util.Properties;
  * @see TeaNekoAppApplication
  */
 public final class TeaNekoCoreInjection implements AutoCloseable {
+    /// spring profile 系统属性名称
     private static final String SPRING_PROFILE_PROPERTY = "spring.profiles.active";
+
+    /// 默认 Spring Profile 类型
     private static final String DEFAULT_PROFILE = "prod";
 
+    /// 用于记录插件实例，来提供数据目录、日志、版本和类加载器
     private final JavaPlugin plugin;
+
+    /// 已启动的 Spring Boot 应用上下文
+    @Getter
     private ConfigurableApplicationContext applicationContext;
 
     /**
@@ -85,13 +93,19 @@ public final class TeaNekoCoreInjection implements AutoCloseable {
      * @see DefaultResourceLoader
      */
     private ConfigurableApplicationContext startApplicationContext() {
+        // 使用插件类作为资源加载器，确保 Spring Boot 能够读取插件 JAR 中的自动配置资源
         ClassLoader pluginClassLoader = plugin.getClass().getClassLoader();
+
+        // 获取当前线程和原始类加载器，以便在启动后恢复
         Thread currentThread = Thread.currentThread();
         ClassLoader originalClassLoader = currentThread.getContextClassLoader();
+
+        // 获取当前活动的 Spring Profile，并加载对应的配置属性
         String activeProfile = getActiveProfile();
         String originalProfile = System.getProperty(SPRING_PROFILE_PROPERTY);
         Properties springProperties = loadSpringProperties(pluginClassLoader, activeProfile);
 
+        // 将当前线程的上下文类加载器切换为插件类加载器，并设置 Spring Profile 系统属性
         currentThread.setContextClassLoader(pluginClassLoader);
         System.setProperty(SPRING_PROFILE_PROPERTY, activeProfile);
         try {
@@ -122,16 +136,19 @@ public final class TeaNekoCoreInjection implements AutoCloseable {
      * @return {@code dev} 或 {@code prod}
      */
     private String getActiveProfile() {
+        // 优先使用 JVM 系统属性指定的 Spring Profile
         String systemProfile = System.getProperty(SPRING_PROFILE_PROPERTY);
         if (isSupportedProfile(systemProfile)) {
             return systemProfile;
         }
 
+        // 其次尝试读取插件数据目录中的 spring-profile.properties 文件
         File profileFile = new File(plugin.getDataFolder(), "spring-profile.properties");
         if (!profileFile.isFile()) {
             return DEFAULT_PROFILE;
         }
 
+        // 读取文件中的 spring.profiles.active 属性，并验证其有效性
         Properties properties = new Properties();
         try (InputStream inputStream = new FileInputStream(profileFile)) {
             properties.load(inputStream);
@@ -141,11 +158,13 @@ public final class TeaNekoCoreInjection implements AutoCloseable {
             return DEFAULT_PROFILE;
         }
 
+        // 验证读取到的 Profile 是否为插件允许的运行环境
         String profile = properties.getProperty(SPRING_PROFILE_PROPERTY);
         if (isSupportedProfile(profile)) {
             return profile;
         }
 
+        // 无效的 Profile 值，记录警告并回退到默认值
         plugin.getLogger().warning("本地 Spring Profile 标记无效，将使用 prod。");
         return DEFAULT_PROFILE;
     }
