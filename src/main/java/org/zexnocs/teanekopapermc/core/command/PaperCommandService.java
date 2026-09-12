@@ -2,7 +2,6 @@ package org.zexnocs.teanekopapermc.core.command;
 
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.springframework.stereotype.Service;
 import org.zexnocs.teanekocore.command.CommandScanner;
 import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.interfaces.ICommandDispatcher;
@@ -11,7 +10,6 @@ import org.zexnocs.teanekocore.utils.scanner.inerfaces.IBeanScanner;
 import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
 import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandService;
 import org.zexnocs.teanekopapermc.core.command.interfaces.IPaperCommandTabCompleter;
-import org.zexnocs.teanekopapermc.core.handler.TeaNekoCoreHandler;
 import org.zexnocs.teanekopapermc.core.initializer.api.ITeaNekoInitializer;
 import org.zexnocs.teanekopapermc.core.initializer.api.TeaNekoInitializer;
 import org.zexnocs.teanekopapermc.utils.PaperCommandIntrospectionUtils;
