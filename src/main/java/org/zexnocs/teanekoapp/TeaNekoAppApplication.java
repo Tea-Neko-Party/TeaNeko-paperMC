@@ -9,10 +9,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 以确保生命周期由 Paper 管理。
  *
  * @author zExNocs
- * @date 2026/09/09
+ * @date 2026/09/12
  * @since paperMC-1.0.0alpha
  * @see org.zexnocs.teanekopapermc.TeaNekoPaperPlugin
  */
-@SpringBootApplication(scanBasePackages = {"org.zexnocs"})
+@SpringBootApplication(scanBasePackages = TeaNekoAppApplication.ROOT_SCAN_PACKAGE)
 public class TeaNekoAppApplication {
+    /** Spring 运行期与 Paper 指令构建期共同使用的根扫描包。 */
+    public static final String ROOT_SCAN_PACKAGE = "org.zexnocs";
 }

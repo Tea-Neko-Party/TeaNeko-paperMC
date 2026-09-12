@@ -1,5 +1,6 @@
 package org.zexnocs.teanekopapermc.build;
 
+import org.zexnocs.teanekoapp.TeaNekoAppApplication;
 import org.zexnocs.teanekocore.command.api.Command;
 import org.zexnocs.teanekocore.command.api.SubCommand;
 import org.zexnocs.teanekopapermc.core.command.api.TeaNekoMCCommand;
@@ -16,7 +17,7 @@ import java.util.*;
  * 在构建期扫描已编译的 Minecraft 指令类并生成 Paper plugin.yml。
  *
  * @author zExNocs
- * @date 2026/09/11
+ * @date 2026/09/12
  * @since paperMC-1.0.0alpha
  * @see TeaNekoMCCommand
  */
@@ -79,7 +80,8 @@ public final class TeaNekoPluginDescriptorGenerator {
                     .filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".class"))
                     .map(path -> toClassName(classesDirectory, path))
-                    .filter(name -> name.startsWith("org.zexnocs.teanekopapermc."))
+                    // 与 Spring 使用同一根包，避免构建期遗漏其他功能包中的 Minecraft 指令。
+                    .filter(name -> name.startsWith(TeaNekoAppApplication.ROOT_SCAN_PACKAGE + "."))
                     .filter(name -> !name.contains("$"))
                     .sorted()
                     .toList();

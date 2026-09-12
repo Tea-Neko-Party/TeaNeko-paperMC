@@ -20,7 +20,7 @@ TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teanekocore` 与 `org.zexnocs
 
 ## Spring Boot 应用上下文
 
-插件启用时，`TeaNekoPaperPlugin` 会委托 `TeaNekoCoreInjection` 创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时会通过该管理器关闭上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
+插件启用时，`TeaNekoPaperPlugin` 只负责衔接 Paper 生命周期，并将启动工作委托给 `TeaNekoCoreHandler`。处理器通过 `TeaNekoCoreInjection` 创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时，处理器会先逆序关闭 Paper 初始化器，再关闭 Spring 上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
 
 首次启用会将默认 `application.properties` 与 `application-prod.properties` 复制到插件数据目录。插件未收到有效的活动 Profile 时默认启用 `prod`；生产服务器请在 `plugins/TeaNekoPaper/application-prod.properties` 填写 MySQL 连接信息，或向 Paper 进程设置 `TEANEKO_DATABASE_URL`、`TEANEKO_DATABASE_USERNAME` 与 `TEANEKO_DATABASE_PASSWORD` 环境变量。外部配置文件会覆盖插件 JAR 内的模板，因此凭据不会被写入构建产物。
 
@@ -40,6 +40,86 @@ spring.datasource.url=jdbc:h2:file:${teaneko.paper.data-directory}/database/tean
 spring.datasource.username=sa
 spring.datasource.password=
 ```
+
+## 核心初始化架构
+
+启动链路如下：
+
+```text
+Paper onEnable
+  → TeaNekoCoreHandler
+  → TeaNekoCoreInjection 启动 Spring Boot
+  → TeaNekoInitializerScanner 扫描初始化器
+  → 按 priority 从高到低调用 initialize
+  → PaperCommandService 验证并绑定 Minecraft 指令
+```
+
+`TeaNekoPaperPlugin` 不直接初始化具体功能。需要访问 Paper API 或在 Spring 上下文完成后执行启动动作的服务，应实现 `ITeaNekoInitializer` 并标注 `@TeaNekoInitializer`：
+
+```java
+/**
+ * 演示一个具有明确启动和关闭生命周期的 Paper 功能。
+ *
+ * @author zExNocs
+ * @date 2026/09/12
+ * @since paperMC-1.0.0alpha
+ */
+@TeaNekoInitializer(required = true, priority = 200)
+public final class ExampleInitializer implements ITeaNekoInitializer {
+    private BukkitTask task;
+
+    /**
+     * 创建当前功能需要的 Paper 侧资源。
+     *
+     * @param plugin 当前 Paper 插件
+     */
+    @Override
+    public void initialize(JavaPlugin plugin) {
+        task = plugin.getServer().getScheduler().runTaskTimer(
+                plugin,
+                () -> {
+                    // 执行需要位于 Paper 主线程的周期工作。
+                },
+                20L,
+                20L
+        );
+    }
+
+    /**
+     * 释放初始化阶段创建的资源。
+     */
+    @Override
+    public void close() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+    }
+}
+```
+
+初始化器遵循以下约定：
+
+- `@TeaNekoInitializer` 已经包含 Spring `@Component` 语义，不要重复添加组件注解。
+- `priority` 数值越大越早初始化；相同优先级按实现类名排序，保证启动顺序稳定。默认值是 `0`。
+- `required` 默认是 `false`。可选初始化器失败时会记录错误、立即尝试清理并继续启动；必须初始化器失败时会回滚已初始化资源、关闭 Spring 上下文并使插件启动失败。
+- 只有成功初始化的实例会在插件停用时按照相反顺序关闭。`close()` 也可能在 `initialize()` 中途失败后被调用，因此必须允许部分初始化状态，并应设计为可重复安全执行。
+- Bean 之间的结构依赖优先使用 Spring 构造器注入；`priority` 只用于约束必须按顺序执行的 Paper 侧启动动作。
+- 初始化器在 Paper 插件启动线程中同步执行，不要执行无界等待或长期阻塞任务。需要异步工作的功能应在初始化时提交受控任务，并在 `close()` 中取消。
+
+### 指令服务初始化
+
+`PaperCommandService` 是优先级为 `100` 的必须初始化器。它会先完成所有 Spring 指令 Bean、Core 声明、Paper 客户端兼容性和 `plugin.yml` 声明检查，全部通过后才统一绑定 Bukkit Executor 与 TabCompleter。绑定阶段发生异常时会恢复原绑定；插件关闭时也会释放这些绑定。
+
+构建期和 Spring 运行期共同使用 `TeaNekoAppApplication.ROOT_SCAN_PACKAGE`，当前值为 `org.zexnocs`。因此放在任意 `org.zexnocs.*` 新功能包中的顶级指令类都能进入同一套扫描流程，不再局限于 `teanekopapermc` 包。若未来修改项目根包，必须修改该常量后重新构建插件。
+
+添加 Minecraft 指令时无需修改 `TeaNekoPaperPlugin`：
+
+1. 在 `org.zexnocs.*` 下创建由 Spring 管理的顶级类，并同时标注 Core 的 `@Command` 与 Paper 的 `@TeaNekoMCCommand`。
+2. 使用 `@DefaultCommand`、`@SubCommand` 和可选的 `@TeaNekoMCSubCommand` 声明执行方法与子指令权限。
+3. 执行 `shadowJar`、`build` 或 `runServer`。构建任务会自动生成 `plugin.yml`，服务器启动时指令服务会自动完成运行期绑定。
+
+更完整的参数转换、权限和自动补全示例见 `src/main/java/org/zexnocs/teanekopapermc/core/command/README.md`。
 
 ## 本地运行与调试
 
@@ -85,7 +165,7 @@ spring.datasource.password=
 
 ## 当前边界
 
-插件入口是 `org.zexnocs.teanekopapermc.TeaNekoPaperPlugin`，负责 Paper 与 Spring Boot 的统一生命周期、默认 `config.yml` 和示例状态命令。Spring Bean 中若调用 Bukkit/Paper API，必须自行切回服务器主线程。
+插件入口是 `org.zexnocs.teanekopapermc.TeaNekoPaperPlugin`，只负责 Paper 与核心处理器的生命周期以及默认 `config.yml`。功能初始化通过 `@TeaNekoInitializer` 扩展，Minecraft 指令通过 `@TeaNekoMCCommand` 扩展。Core 指令默认异步执行；Spring Bean 中若调用 Bukkit/Paper API，必须通过 `PaperCommandUtils` 切回服务器主线程。
 
 ## 测试
 
@@ -93,4 +173,4 @@ spring.datasource.password=
 .\gradlew.bat test
 ```
 
-现有依赖旧 Spring Boot 应用入口的集成测试已从默认测试源集中排除，源码仍保留，待数据库和 Spring 容器迁移策略确定后再恢复。
+现有依赖旧 Spring Boot 应用入口的部分集成测试仍从默认测试源集中排除，源码继续保留。新增初始化器或指令基础设施时，应至少验证初始化顺序、必须组件失败传播、关闭逆序和指令注册回滚。

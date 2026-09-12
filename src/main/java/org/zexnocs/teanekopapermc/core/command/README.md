@@ -57,7 +57,9 @@ public void setNumber(CommandData<PaperCommandContext> commandData, String playe
 build/generated/resources/pluginYml/plugin.yml
 ```
 
-服务器启动后，`PaperCommandService` 会再次扫描 Spring Bean，并将生成描述文件中的 Bukkit 指令绑定到 Core `CommandDispatcher`。参数转换、权限与作用域校验、事件通知和异步执行仍由 `teanekocore.command` 完成。
+服务器启动后，`TeaNekoCoreHandler` 会按初始化优先级调用 `PaperCommandService`。该服务作为必须初始化器，会再次扫描 Spring Bean，先验证全部指令与生成描述文件一致，再统一将 Bukkit 指令绑定到 Core `CommandDispatcher`。任何指令验证或绑定失败都会回滚已完成的绑定并终止插件启动；插件停用时也会恢复原有绑定。参数转换、权限与作用域校验、事件通知和异步执行仍由 `teanekocore.command` 完成。
+
+构建期描述文件生成器与 Spring 运行期都使用 `TeaNekoAppApplication.ROOT_SCAN_PACKAGE`，当前会扫描所有 `org.zexnocs.*` 顶级类。将指令放入该根包下的新功能包即可自动参与生成和注册；修改根包后必须重新构建插件。
 
 ## Bukkit API 与线程
 

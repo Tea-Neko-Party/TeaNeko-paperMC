@@ -5,11 +5,11 @@ import org.zexnocs.teanekocore.reload.api.IScanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 用于快速实现 canner 的抽象类。
+ * 为可重载扫描器提供只初始化一次和失败后可重试的通用状态管理。
  *
  * @author zExNocs
- * @date 2026/02/26
- *
+ * @date 2026/09/12
+ * @since paperMC-1.0.0alpha
  */
 public abstract class AbstractScanner implements IScanner {
 
@@ -32,7 +32,7 @@ public abstract class AbstractScanner implements IScanner {
      * 热重载方法。
      */
     @Override
-    public void reload() {
+    public synchronized void reload() {
         _clear();
         _scan();
     }
@@ -42,9 +42,15 @@ public abstract class AbstractScanner implements IScanner {
      * 用于防止第一次重复加载。
      */
     @Override
-    public void init() {
+    public synchronized void init() {
         if(isInit.compareAndSet(false, true)) {
-            _scan();
+            try {
+                _scan();
+            } catch (RuntimeException | Error exception) {
+                // 首次扫描失败不能永久锁死初始化状态，允许上层在处理异常后再次尝试。
+                isInit.set(false);
+                throw exception;
+            }
         }
     }
 }

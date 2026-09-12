@@ -1,7 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.tasks.Copy
-import java.util.Properties
+import java.util.*
 
 plugins {
     java
@@ -53,6 +51,8 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+
+    testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -117,7 +117,9 @@ tasks.withType<ShadowJar>().configureEach {
     append("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports")
     filesNotMatching(listOf(
         "META-INF/services/**",
-        "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
+        "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports",
+        // 保留 Kotlin 模块元数据给 Shadow 内置转换器处理，避免构建时静默丢弃。
+        "META-INF/*.kotlin_module"
     )) {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
