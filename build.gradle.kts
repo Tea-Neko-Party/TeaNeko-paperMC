@@ -49,23 +49,26 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
-    testImplementation(platform("org.junit:junit-bom:6.0.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-
+    // 测试代码独立编译，需要单独声明 Lombok 及其注解处理器。
+    testCompileOnly("org.projectlombok:lombok:1.18.42")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
+    // 提供 Spring Boot 测试上下文、JUnit Jupiter、Mockito 等测试基础设施。
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // 测试代码需要直接引用 Bukkit/Paper 类型，主源集的 compileOnly 不会自动传递至此。
     testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 sourceSets {
     test {
-        // 旧 Spring Boot 集成测试保留至后续 core 迁移时处理。
-        // 它们依赖已移除的应用启动类，不属于当前插件骨架。
+        // 旧 Spring Boot 集成测试会启动完整应用或访问数据库，暂不纳入插件单元测试。
         java.exclude(
-            "org/zexnocs/teanekocore/command/**",
-            "org/zexnocs/teanekocore/database/**",
-            "org/zexnocs/teanekocore/event/EventTest.java",
-            "org/zexnocs/teanekocore/file_config/**",
-            "org/zexnocs/teanekocore/task/**"
+            "org/zexnocs/teaneko/core/command/CommandArgumentProcessorTest.java",
+            "org/zexnocs/teaneko/core/command/CommandInheritanceTest.java",
+            "org/zexnocs/teaneko/core/database/**",
+            "org/zexnocs/teaneko/core/event/EventTest.java",
+            "org/zexnocs/teaneko/core/file_config/**",
+            "org/zexnocs/teaneko/core/task/**"
         )
     }
 }
@@ -85,7 +88,7 @@ val generatePluginYml = tasks.register<JavaExec>("generatePluginYml") {
     val mainClasses = sourceSets.main.get().output.classesDirs
     // 扫描类可能引用 Paper 的 compileOnly 类型，生成器必须同时拥有编译与运行时类路径。
     classpath = files(mainClasses, sourceSets.main.get().compileClasspath, configurations.runtimeClasspath)
-    mainClass.set("org.zexnocs.teanekopapermc.build.TeaNekoPluginDescriptorGenerator")
+    mainClass.set("org.zexnocs.teaneko.mc.build.TeaNekoPluginDescriptorGenerator")
     jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
     inputs.files(mainClasses)
     inputs.property("version", project.version)
@@ -110,7 +113,7 @@ tasks.processResources {
 tasks.withType<ShadowJar>().configureEach {
     archiveClassifier.set("")
     // 构建期描述文件生成器不属于服务器运行时代码。
-    exclude("org/zexnocs/teanekopapermc/build/**")
+    exclude("org/zexnocs/teaneko/mc/build/**")
     // Spring Boot 依赖 META-INF 中的自动配置资源，不能重定位其包名。
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     mergeServiceFiles()
@@ -127,7 +130,7 @@ tasks.withType<ShadowJar>().configureEach {
 
 tasks.jar {
     archiveClassifier.set("dev")
-    exclude("org/zexnocs/teanekopapermc/build/**")
+    exclude("org/zexnocs/teaneko/mc/build/**")
 }
 
 tasks.assemble {

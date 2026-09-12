@@ -1,0 +1,44 @@
+package org.zexnocs.teaneko.app.message;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import org.zexnocs.teaneko.app.message.api.ITeaNekoContent;
+import org.zexnocs.teaneko.app.message.api.ITeaNekoContentPart;
+
+/**
+ * Tea Neko 消息实现类。
+ *
+ * @see ITeaNekoContent
+ * @author zExNocs
+ * @date 2026/02/27
+ * @since 4.0.9
+ */
+@Getter
+@Setter
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TeaNekoContent implements ITeaNekoContent {
+    /**
+     * 消息内容前缀，用于注册消息内容类。
+     */
+    public static final String PREFIX = "TeaNeko-";
+
+    /**
+     * 消息类型，例如 "text"、"image"、"at" 等。
+     */
+    @Getter
+    @JsonProperty("type")
+    protected String type;
+
+    /**
+     * 消息内容对象，具体类型根据消息类型而定。必须实现 ITeaNekoContent 接口。
+     */
+    @Getter
+    @JsonProperty("data")
+    protected ITeaNekoContentPart contentPart;
+}

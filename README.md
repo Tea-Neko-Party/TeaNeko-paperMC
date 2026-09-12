@@ -1,6 +1,6 @@
 # TeaNeko Paper
 
-TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teanekocore` 与 `org.zexnocs.teanekoapp` 会一起打入插件，并由 Paper 生命周期管理的 Spring Boot 应用上下文加载。
+TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teaneko.core` 与 `org.zexnocs.teaneko.app` 会一起打入插件，并由 Paper 生命周期管理的 Spring Boot 应用上下文加载。
 
 ## 环境
 
@@ -20,7 +20,7 @@ TeaNeko 的 Paper 26.2 插件工程。`org.zexnocs.teanekocore` 与 `org.zexnocs
 
 ## Spring Boot 应用上下文
 
-插件启用时，`TeaNekoPaperPlugin` 只负责衔接 Paper 生命周期，并将启动工作委托给 `TeaNekoCoreHandler`。处理器通过 `TeaNekoCoreInjection` 创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `teanekoapp` 的 WebSocket 外部交互层。插件停用时，处理器会先逆序关闭 Paper 初始化器，再关闭 Spring 上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
+插件启用时，`TeaNekoPaperPlugin` 只负责衔接 Paper 生命周期，并将启动工作委托给 `TeaNekoCoreHandler`。处理器通过 `TeaNekoCoreInjection` 创建 Servlet 模式的 Spring Boot 应用上下文，扫描 `org.zexnocs` 下的组件，并启动 `org.zexnocs.teaneko.app` 的 WebSocket 外部交互层。插件停用时，处理器会先逆序关闭 Paper 初始化器，再关闭 Spring 上下文，进而停止 Web 服务、数据库连接池和 Spring 管理的任务。
 
 首次启用会将默认 `application.properties` 与 `application-prod.properties` 复制到插件数据目录。插件未收到有效的活动 Profile 时默认启用 `prod`；生产服务器请在 `plugins/TeaNekoPaper/application-prod.properties` 填写 MySQL 连接信息，或向 Paper 进程设置 `TEANEKO_DATABASE_URL`、`TEANEKO_DATABASE_USERNAME` 与 `TEANEKO_DATABASE_PASSWORD` 环境变量。外部配置文件会覆盖插件 JAR 内的模板，因此凭据不会被写入构建产物。
 
@@ -111,7 +111,7 @@ public final class ExampleInitializer implements ITeaNekoInitializer {
 
 `PaperCommandService` 是优先级为 `100` 的必须初始化器。它会先完成所有 Spring 指令 Bean、Core 声明、Paper 客户端兼容性和 `plugin.yml` 声明检查，全部通过后才统一绑定 Bukkit Executor 与 TabCompleter。绑定阶段发生异常时会恢复原绑定；插件关闭时也会释放这些绑定。
 
-构建期和 Spring 运行期共同使用 `TeaNekoAppApplication.ROOT_SCAN_PACKAGE`，当前值为 `org.zexnocs`。因此放在任意 `org.zexnocs.*` 新功能包中的顶级指令类都能进入同一套扫描流程，不再局限于 `teanekopapermc` 包。若未来修改项目根包，必须修改该常量后重新构建插件。
+构建期和 Spring 运行期共同使用 `TeaNekoAppApplication.ROOT_SCAN_PACKAGE`，当前值为 `org.zexnocs`。因此放在任意 `org.zexnocs.*` 新功能包中的顶级指令类都能进入同一套扫描流程，不再局限于 `org.zexnocs.teaneko.mc` 包。若未来修改项目根包，必须修改该常量后重新构建插件。
 
 添加 Minecraft 指令时无需修改 `TeaNekoPaperPlugin`：
 
@@ -119,7 +119,18 @@ public final class ExampleInitializer implements ITeaNekoInitializer {
 2. 使用 `@DefaultCommand`、`@SubCommand` 和可选的 `@TeaNekoMCSubCommand` 声明执行方法与子指令权限。
 3. 执行 `shadowJar`、`build` 或 `runServer`。构建任务会自动生成 `plugin.yml`，服务器启动时指令服务会自动完成运行期绑定。
 
-更完整的参数转换、权限和自动补全示例见 `src/main/java/org/zexnocs/teanekopapermc/core/command/README.md`。
+更完整的参数转换、权限和自动补全示例见 `src/main/java/org/zexnocs/teaneko/mc/core/command/README.md`。
+
+### 参数解析与自动补全
+
+指令参数可以使用 `@CommandComplete` 声明固定候选或独立的 Spring 补全提供器。
+`Player` 会自动解析并补全在线玩家，`OfflinePlayer` 会自动解析并补全服务器存在过的玩家；
+布尔和枚举参数也具有默认候选。业务相关候选应实现 `IPaperCommandCompletionProvider`，
+新的可解析 Java 类型应实现 `IPaperCommandArgumentTypeHandler<T>`。全部扩展 Bean 都会随
+Spring 根扫描包自动发现，无需修改 `TeaNekoPaperPlugin` 或中央补全函数。
+
+补全回调运行在 Paper 主线程，只允许读取内存快照。需要数据库数据的提供器应通过初始化器
+或事件提前异步加载，并在 `close()` 中注销监听器、取消任务和清理缓存。
 
 ## 本地运行与调试
 
@@ -165,7 +176,7 @@ public final class ExampleInitializer implements ITeaNekoInitializer {
 
 ## 当前边界
 
-插件入口是 `org.zexnocs.teanekopapermc.TeaNekoPaperPlugin`，只负责 Paper 与核心处理器的生命周期以及默认 `config.yml`。功能初始化通过 `@TeaNekoInitializer` 扩展，Minecraft 指令通过 `@TeaNekoMCCommand` 扩展。Core 指令默认异步执行；Spring Bean 中若调用 Bukkit/Paper API，必须通过 `PaperCommandUtils` 切回服务器主线程。
+插件入口是 `org.zexnocs.teaneko.mc.TeaNekoPaperPlugin`，只负责 Paper 与核心处理器的生命周期以及默认 `config.yml`。功能初始化通过 `@TeaNekoInitializer` 扩展，Minecraft 指令通过 `@TeaNekoMCCommand` 扩展。Core 指令默认异步执行；Spring Bean 中若调用 Bukkit/Paper API，必须通过 `PaperCommandUtils` 切回服务器主线程。
 
 ## 测试
 
